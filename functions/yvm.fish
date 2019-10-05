@@ -31,9 +31,6 @@ function yvm -a cmd -d "yarn version manager"
 end
 
 function _yvm_get_releases
-    set -l options (fish_opt -s f -l force-fetch)
-    argparse $options -- $argv
-
     set -q yvm_last_updated
     or set -g yvm_last_updated 0
     set -l releases "$yvm_config/yarn_releases"
@@ -69,7 +66,13 @@ function _yvm_use
     set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
-    set -l releases (_yvm_get_releases $_flag_f)
+    set -l force_fetch 0
+
+    if test -n "$_flag_f"
+        set force_fetch 1
+    end
+
+    set -l releases (_yvm_get_releases "$force_fetch")
 
     set -l yarn_version
     set -l version_to_install $argv
@@ -111,6 +114,11 @@ function _yvm_use
         command rm -r $temp_dir
     end
 
+    if not test -d "$yvm_config/$version_to_install/"
+      echo "Failed to install yarn version \"$version_to_install\", but curl didn't error. Please report this bug."
+      return 1
+    end
+
     if test -s "$yvm_config/version"
         read -l last <"$yvm_config/version"
         if set -l i (contains -i -- "$yvm_config/$last/bin" $fish_user_paths)
@@ -126,12 +134,16 @@ function _yvm_use
 end
 
 function _yvm_rm
-    set -l options (fish_opt -s f -l force-fetch)
+    set -l options (fish_opt -s f -l force-fetch) (fish_opt -s p -l pathonly)
     argparse $options -- $argv
 
-    set -l releases (_yvm_get_releases $_flag_f)
-    set -l options (fish_opt -s p -l pathonly)
-    argparse $options -- $argv
+    set -l force_fetch 0
+
+    if test -n "$_flag_f"
+        set force_fetch 1
+    end
+
+    set -l releases (_yvm_get_releases "$force_fetch")
 
     set -l yarn_version $argv[1]
     read -l active_version <"$yvm_config/version"
@@ -166,35 +178,36 @@ end
 function _yvm_ls
     set -l options (fish_opt -s i -l installed-only) (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
+    set -l force_fetch 0
 
-    set -l releases (_yvm_get_releases "$_flag_f")
+    if test -n "$_flag_f"
+        set force_fetch 1
+    end
+
+    set -l releases (_yvm_get_releases "$force_fetch")
     set -l yarn_version
 
     if test -f "$yvm_config/version"
         read yarn_version <"$yvm_config/version"
     end
 
-    if test -n "$_flag_i"
-        set -l installed_versions (command find "$yvm_config" -maxdepth 1 -mindepth 1 -type d)
-
-        if test (count $installed_versions) -lt 1
-            echo "No yarn versions installed"
-        else
-            for x in $installed_versions
-                echo (basename $x) \t "installed"
-            end
-        end
-
-        return 0
-    end
-
     # https://github.com/jorgebucaran/fish-cookbook#how-do-i-read-from-a-file-in-fish
     while read -la release
         set -l parts (string split " " $release)
         set -l release_version $parts[1]
-        echo -n $release_version
+        set -l is_installed 0
 
         if test -d "$yvm_config/$release_version"
+            set is_installed 1
+        end
+
+        if test -n "$_flag_i"; and test "$is_installed" -eq 0
+          continue
+        end
+
+        echo -n $release_version
+
+        if test "$is_installed" -eq 1
             echo -n \t "installed"
         end
 
