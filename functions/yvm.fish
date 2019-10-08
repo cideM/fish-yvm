@@ -1,6 +1,19 @@
-set -g yvm_fish 0.0.1
+set -g yvm_fish 0.5.0
 
 function yvm -a cmd -d "yarn version manager"
+    set -l options (fish_opt -s h -l help) (fish_opt -s v -l version)
+    argparse $options -- $argv
+
+    if test -n "$_flag_h"
+      _yvm_help
+      return 0
+    end
+
+    if test -n "$_flag_v"
+      echo "$yvm_fish"
+      return 0
+    end
+
     set -q XDG_CONFIG_HOME
     or set XDG_CONFIG_HOME ~/.config
     set -g yvm_config $XDG_CONFIG_HOME/yvm-fish
@@ -134,7 +147,7 @@ function _yvm_use
 end
 
 function _yvm_rm
-    set -l options (fish_opt -s f -l force-fetch) (fish_opt -s p -l pathonly)
+    set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
     set -l force_fetch 0
@@ -158,12 +171,6 @@ function _yvm_rm
 
     if set -l i (contains -i -- "$yvm_config/$yarn_version/bin" $fish_user_paths)
         set -e fish_user_paths[$i]
-    else if test -n "$_flag_p"
-        echo "No version \"$yarn_version\" found on \"\$fish_user_paths\"."
-    end
-
-    if test -n "$_flag_p"
-        return 0
     end
 
     if not test -d "$yvm_config/$yarn_version/"
@@ -176,7 +183,7 @@ function _yvm_rm
 end
 
 function _yvm_ls
-    set -l options (fish_opt -s i -l installed-only) (fish_opt -s f -l force-fetch)
+    set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
     set -l force_fetch 0
 
@@ -201,10 +208,6 @@ function _yvm_ls
             set is_installed 1
         end
 
-        if test -n "$_flag_i"; and test "$is_installed" -eq 0
-          continue
-        end
-
         echo -n $release_version
 
         if test "$is_installed" -eq 1
@@ -223,9 +226,15 @@ end
 function _yvm_help
     echo "usage: yvm --help           Show this help"
     echo "       yvm --version        Show the current version of yvm"
-    echo "       yvm use <version>    Download <version> and modify PATH to use it"
+    echo "       yvm use <version>    Download <version> and modify PATH to use it."
+    echo "                            Needs to be the exact version from ls."
+    echo "       yvm ls/list          List all versions including if they're installed and/or active"
+    echo "       yvm rm               Remove specified version from file system and PATH."
+    echo "                            Needs to be the exact version from ls."
+    echo "       yvm -f/--force-fetch Force fetch the releases from remote before use or ls"
     echo "examples:"
-    echo "       yvm use 12"
+    echo "       yvm use 1.17.3"
     echo "       yvm use latest"
     echo "       yvm ls"
+    echo "       yvm ls -f"
 end
