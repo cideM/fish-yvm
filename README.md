@@ -99,3 +99,7 @@ yvm ls | grep active
 - Remove active version from \$fish_user_paths using `yvm rm`
 - Remove configuration data in `$XDG_CONFIG_HOME/yvm-fish/` (most likely `~/.config/yvm-fish`, so `rm -r ~/.config/yvm-fish`)
 - Remove from fish. Depends on how you installed it. When done manually you'll have to remove the installed files. With fisher it's just `fisher rm cideM/fish-yvm`
+
+## Additional Recordings
+
+![](errors_and_odd_versions.svg)
