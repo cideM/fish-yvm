@@ -4,7 +4,8 @@
 
 - Uses Fish's awesome <kbd>tab</kbd>-completion
 - Minimal, no setup, no dependencies
-- Extremely simple: it just adds the path to the installed yarn version to $fish_user_paths and doesn't mess with anything else.
+- Works even with extremely old versions
+- Extremely simple: it just adds the path to the installed yarn version to `$fish_user_paths` and doesn't mess with anything else.
 
 ![](basics.svg)
 
@@ -101,5 +102,7 @@ yvm ls | grep active
 - Remove from fish. Depends on how you installed it. When done manually you'll have to remove the installed files. With fisher it's just `fisher rm cideM/fish-yvm`
 
 ## Additional Recordings
+
+This shows installing a very old version which doesn't export `yarn`, but rather `kpm.js`. It also shows what happens when you try to install a version that doesn't have a release tarball.
 
 ![](errors_and_odd_versions.svg)
