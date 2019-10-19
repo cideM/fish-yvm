@@ -83,6 +83,10 @@ Example:
 yvm rm 1.19.0
 ```
 
+### `help`
+
+Prints the help, just like `yvm -h` and `yvm --help`
+
 ## How To
 
 ### Show Installed Versions
