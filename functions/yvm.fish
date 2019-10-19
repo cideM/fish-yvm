@@ -94,8 +94,11 @@ function _yvm_use
         return 1
     end
 
+    set -l tarball_base_name "yarn-v$version_to_install"
+
+    set -l url "https://yarnpkg.com/downloads/$version_to_install/$tarball_base_name.tar.gz"
+
     if not test -d "$yvm_config/$version_to_install"
-        set -l url (cat $releases | grep $version_to_install | awk '{ print $2 }')
 
         echo "fetching $url..." >&2
 
@@ -155,7 +158,7 @@ function _yvm_rm
     set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
-    set -l releases (_yvm_get_releases "$_flag_f")
+    set -l releases (_yvm_get_releases "$_flag_f" 2> /dev/null)
 
     set -l yarn_version $argv[1]
     read -l active_version <"$yvm_config/version"
