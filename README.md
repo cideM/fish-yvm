@@ -1,4 +1,10 @@
-# Yarn Version Manager written in Fish :fish:
+# yvm-fish (Yarn Version Manager written in Fish :fish:)
+
+> Version manager for yarn written in & for Fish
+
+- Uses Fish's awesome <kbd>tab</kbd>-completion
+- Minimal, no setup, no dependencies
+- Extremely simple: it just adds the path to the installed yarn version to $fish_user_paths and doesn't mess with anything else.
 
 ## Quickstart
 
@@ -30,11 +36,11 @@ curl https://raw.githubusercontent.com/cideM/fish-yvm/master/functions/yvm.fish\
 
 ### `use <version>`
 
-Installs and activates given version of `yarn`. Version needs to exactly match one of the versions returned from `yvm ls`. The only exception to this rule is that `latest` will always install the most recent `yarn` version. Takes an optional `-f` or `--force-fetch` flag, which forces fetching the list of available resources from remote. If not the list is only updated if it's older than 120s.
+Installs and activates given version of `yarn`. Version needs to exactly match one of the versions returned from `yvm ls`, which will be suggested through tab completion. The only exception to this rule is that `latest` will always install the most recent `yarn` version. Takes an optional `-f` or `--force-fetch` flag, which forces fetching the list of available resources from remote. If not the list is only updated if it's older than 120s.
 
-List of releases is stored under `$XDG_CONFIG_HOME/yvm-fish` (for most people this will be `~/.config/yvm-fish`.
+List of releases is stored under `$XDG_CONFIG_HOME/yvm-fish/yarn_releases` (for most people this will be `~/.config/yvm-fish/yarn_releases`.
 
-The currently active version is stored under `$XDG_CONFIG_HOME/version`.
+The currently active version is stored under `$XDG_CONFIG_HOME/yvm-fish/version`.
 
 Example:
 
@@ -71,3 +77,23 @@ Example:
 ```fish
 yvm rm 1.19.0
 ```
+
+## How To
+
+### Show Installed Versions
+
+```fish
+yvm ls | grep installed
+```
+
+### Show Active Version
+
+```fish
+yvm ls | grep active
+```
+
+### Uninstall `yvm`
+
+- Remove active version from \$fish_user_paths using `yvm rm`
+- Remove configuration data in `$XDG_CONFIG_HOME/yvm-fish/` (most likely `~/.config/yvm-fish`, so `rm -r ~/.config/yvm-fish`)
+- Remove from fish. Depends on how you installed it. When done manually you'll have to remove the installed files. With fisher it's just `fisher rm cideM/fish-yvm`
