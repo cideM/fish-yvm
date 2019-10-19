@@ -6,6 +6,7 @@
 - Minimal, no setup, no dependencies
 - Works even with extremely old versions
 - Extremely simple: it just adds the path to the installed yarn version to `$fish_user_paths` and doesn't mess with anything else.
+- Heavily inspired by the super awesome [fish node version manager](https://github.com/jorgebucaran/fish-nvm)
 
 ![](basics.svg)
 
