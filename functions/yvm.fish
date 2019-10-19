@@ -1,8 +1,9 @@
 set -g yvm_fish 0.7.0
+set -g yvm_fish_release_prefixes yarn kpm fb-kpm
 
 function yvm -a cmd -d "yarn version manager"
     set -l options (fish_opt -s h -l help) (fish_opt -s v -l version)
-    argparse $options -- $argv 2> /dev/null
+    argparse $options -- $argv 2>/dev/null
 
     if test -n "$_flag_h"
         _yvm_help
@@ -77,6 +78,23 @@ function _yvm_get_releases
     echo $releases
 end
 
+function _yvm_get_url_for_version -d "Tries different prefixes to generate a valid tarball url"
+    set -l v $argv
+    set -l base "https://github.com/yarnpkg/yarn/releases/download/v$v"
+
+    # For example with the prefixes yarn and kpm this will try things like
+    # yarn-v1.0.0.tar.gz and kpm-v1.0.0.tar.gz
+    for p in $yvm_fish_release_prefixes
+        set -l tarball_name "$p-v$v"
+        set -l url "$base/$tarball_name.tar.gz"
+
+        if curl -L --output /dev/null --silent --fail -r 0-0 "$url"
+            echo $url
+            break
+        end
+    end
+end
+
 function _yvm_use
     set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
@@ -94,9 +112,15 @@ function _yvm_use
         return 1
     end
 
-    set -l tarball_base_name "yarn-v$version_to_install"
+    set -l url (_yvm_get_url_for_version $version_to_install)
 
-    set -l url "https://yarnpkg.com/downloads/$version_to_install/$tarball_base_name.tar.gz"
+    if test -z "$url"
+      echo "Couldn't generate a valid tarball URL"
+      echo -e "Maybe you are offline, or the version you're trying to install needs to be built from source?"
+      echo "Check the yarn releases page https://github.com/yarnpkg/yarn/releases"
+      echo "Sorry :("
+      return 1
+    end
 
     if not test -d "$yvm_config/$version_to_install"
 
@@ -128,14 +152,6 @@ function _yvm_use
 
     if not test -d "$yvm_config/$version_to_install/"
         echo "Failed to install yarn version \"$version_to_install\", but curl didn't error. Please report this bug."
-        return 1
-    end
-
-    if not test -e "$yvm_config/$version_to_install/bin/yarn.js"
-        echo "Yarn was installed but there is no yarn.js in \"$yvm_config/$version_to_install/bin/yarn.js\"."
-        echo "This yarn version is either really old, and exports for example a kpm.js, or it's a version that needs be built from source."
-        echo ""
-        echo "Note that the yarn version is not removed from \"$yvm_config/\", but it's also not prepended to \$fish_user_paths. It's advised to use \"yvm rm\" to remove the version again."
         return 1
     end
 
