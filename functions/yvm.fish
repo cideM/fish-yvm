@@ -114,17 +114,17 @@ function _yvm_use
         return 1
     end
 
-    set -l url (_yvm_get_url_for_version $version_to_install)
-
-    if test -z "$url"
-        echo "Couldn't generate a valid tarball URL"
-        echo -e "Maybe you are offline, or the version you're trying to install needs to be built from source?"
-        echo "Check the yarn releases page https://github.com/yarnpkg/yarn/releases"
-        echo "Sorry :("
-        return 1
-    end
 
     if not test -d "$yvm_config/$version_to_install"
+        set -l url (_yvm_get_url_for_version $version_to_install)
+
+        if test -z "$url"
+            echo "Couldn't generate a valid tarball URL"
+            echo -e "Maybe you are offline, or the version you're trying to install needs to be built from source?"
+            echo "Check the yarn releases page https://github.com/yarnpkg/yarn/releases"
+            echo "Sorry :("
+            return 1
+        end
 
         echo "fetching $url..." >&2
 
