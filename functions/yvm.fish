@@ -84,7 +84,7 @@ function _yvm_use
 
     set -l releases (_yvm_get_releases "$_flag_f")
 
-    set -l version_to_install $argv
+    set -l version_to_install (string trim "$argv")
 
     if test $version_to_install = "latest"
         set version_to_install (cat $releases | head -n 1 | awk '{ print $1 }')
