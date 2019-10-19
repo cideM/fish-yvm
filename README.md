@@ -1,4 +1,4 @@
-# yvm-fish (Yarn Version Manager written in Fish :fish:)
+# fish-yvm (Yarn Version Manager written in Fish :fish:)
 
 > Version manager for yarn written in & for Fish
 
