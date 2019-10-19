@@ -6,6 +6,8 @@
 - Minimal, no setup, no dependencies
 - Extremely simple: it just adds the path to the installed yarn version to $fish_user_paths and doesn't mess with anything else.
 
+![](basics.svg)
+
 ## Quickstart
 
 ```shell
