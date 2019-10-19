@@ -1,4 +1,4 @@
-set -g yvm_fish 0.6.0
+set -g yvm_fish 0.7.0
 
 function yvm -a cmd -d "yarn version manager"
     set -l options (fish_opt -s h -l help) (fish_opt -s v -l version) (fish_opt -s f -l force-fetch)
