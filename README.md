@@ -30,9 +30,10 @@ fisher add cideM/fish-yvm
 
 This assumes that you're fish config folder is located under `~/.config/fish`
 
-```shell
-curl https://raw.githubusercontent.com/cideM/fish-yvm/master/functions/yvm.fish\
-  -o ~/.config/fish/functions/yvm.fish
+```fish
+for i in functions completions
+  curl https://raw.githubusercontent.com/cideM/fish-yvm/master/$i/yvm.fish --create-dirs -sLo $XDG_CONFIG_HOME/fish/$i/yvm.fish
+end
 ```
 
 ## Usage
