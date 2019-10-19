@@ -255,8 +255,4 @@ function _yvm_help
     echo "       yvm use latest"
     echo "       yvm ls"
     echo "       yvm ls -f"
-    echo ""
-    echo "Important:"
-    echo "       Does not support old versions exporting kpm.js, nor versions that need to be"
-    echo "       built from source."
 end
