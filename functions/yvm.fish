@@ -1,8 +1,8 @@
 set -g yvm_fish 0.7.0
 
 function yvm -a cmd -d "yarn version manager"
-    set -l options (fish_opt -s h -l help) (fish_opt -s v -l version) (fish_opt -s f -l force-fetch)
-    argparse $options -- $argv
+    set -l options (fish_opt -s h -l help) (fish_opt -s v -l version)
+    argparse $options -- $argv 2> /dev/null
 
     if test -n "$_flag_h"
         _yvm_help
@@ -27,13 +27,13 @@ function yvm -a cmd -d "yarn version manager"
     switch "$cmd"
         case ls list
             set -e argv[1]
-            _yvm_ls $argv "$_flag_f"
+            _yvm_ls $argv
         case use
             set -e argv[1]
-            _yvm_use $argv "$_flag_f"
+            _yvm_use $argv
         case rm
             set -e argv[1]
-            _yvm_rm $argv "$_flag_f"
+            _yvm_rm $argv
         case "help"
             _yvm_help
         case \*
@@ -53,7 +53,6 @@ function _yvm_get_releases
 
     if test -n "$_flag_f"
         or test ! -e $releases -o (math (command date +%s) - $yvm_last_updated) -gt 120
-        # DOCUMENT
         echo "Fetching releases from $yarn_releases_url" >&2
 
         command curl -s $yarn_releases_url \
@@ -84,7 +83,7 @@ function _yvm_use
 
     set -l releases (_yvm_get_releases "$_flag_f")
 
-    set -l version_to_install (string trim "$argv")
+    set -l version_to_install "$argv"
 
     if test $version_to_install = "latest"
         set version_to_install (cat $releases | head -n 1 | awk '{ print $1 }')
