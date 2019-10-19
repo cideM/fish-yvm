@@ -80,17 +80,19 @@ end
 
 function _yvm_get_url_for_version -d "Tries different prefixes to generate a valid tarball url"
     set -l v $argv
-    set -l base "https://github.com/yarnpkg/yarn/releases/download/v$v"
+    set -l basenames "https://github.com/yarnpkg/yarn/releases/download/v$v" "https://github.com/yarnpkg/yarn/releases/download/$v"
 
-    # For example with the prefixes yarn and kpm this will try things like
-    # yarn-v1.0.0.tar.gz and kpm-v1.0.0.tar.gz
-    for p in $yvm_fish_release_prefixes
-        set -l tarball_name "$p-v$v"
-        set -l url "$base/$tarball_name.tar.gz"
+    for b in $basenames
+        # For example with the prefixes yarn and kpm this will try things like
+        # yarn-v1.0.0.tar.gz and kpm-v1.0.0.tar.gz
+        for p in $yvm_fish_release_prefixes
+            set -l tarball_name "$p-v$v"
+            set -l url "$b/$tarball_name.tar.gz"
 
-        if curl -L --output /dev/null --silent --fail -r 0-0 "$url"
-            echo $url
-            break
+            if curl -L --output /dev/null --silent --fail -r 0-0 "$url"
+                echo $url
+                break
+            end
         end
     end
 end
@@ -115,11 +117,11 @@ function _yvm_use
     set -l url (_yvm_get_url_for_version $version_to_install)
 
     if test -z "$url"
-      echo "Couldn't generate a valid tarball URL"
-      echo -e "Maybe you are offline, or the version you're trying to install needs to be built from source?"
-      echo "Check the yarn releases page https://github.com/yarnpkg/yarn/releases"
-      echo "Sorry :("
-      return 1
+        echo "Couldn't generate a valid tarball URL"
+        echo -e "Maybe you are offline, or the version you're trying to install needs to be built from source?"
+        echo "Check the yarn releases page https://github.com/yarnpkg/yarn/releases"
+        echo "Sorry :("
+        return 1
     end
 
     if not test -d "$yvm_config/$version_to_install"
