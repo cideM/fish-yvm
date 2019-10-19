@@ -3,13 +3,15 @@ set -l yvm_commands ls list use rm help
 function __yvm_get_versions
     set -l yvm_config "$XDG_CONFIG_HOME/yvm-fish"
 
-    if test -e $yvm_config/yarn_releases
-        set -l versions (cat $yvm_config/yarn_releases | awk '{ print $1 }')
-        set -p versions latest
+    if not test -e $yvm_config/yarn_releases
+        _yvm_get_releases >/dev/null 2>&1
+    end
 
-        for v in $versions
-            echo $v
-        end
+    set -l versions (cat $yvm_config/yarn_releases | awk '{ print $1 }')
+    set -p versions latest
+
+    for v in $versions
+        echo $v
     end
 end
 
