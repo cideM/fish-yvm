@@ -27,13 +27,13 @@ function yvm -a cmd -d "yarn version manager"
     switch "$cmd"
         case ls list
             set -e argv[1]
-            _yvm_ls "$_flag_f"
+            _yvm_ls $argv "$_flag_f"
         case use
             set -e argv[1]
-            _yvm_use "$_flag_f"
+            _yvm_use $argv "$_flag_f"
         case rm
             set -e argv[1]
-            _yvm_rm "$_flag_f"
+            _yvm_rm $argv "$_flag_f"
         case "help"
             _yvm_help
         case \*
