@@ -7,7 +7,8 @@ function __yvm_get_versions
         _yvm_get_releases >/dev/null 2>&1
     end
 
-    set -l versions (cat $yvm_config/yarn_releases | awk '{ print $1 }')
+    # https://stackoverflow.com/questions/4493205/unix-sort-of-version-numbers
+    set -l versions (cat $yvm_config/yarn_releases | awk '{ print $1 }' | sort -t. -k 1,1nr -k 2,2nr -k 3,3nr -k 4,4nr)
     set -p versions latest
 
     for v in $versions
@@ -29,7 +30,7 @@ complete --no-files --command yvm --condition "not __fish_seen_subcommand_from $
 complete --no-files --command yvm --condition "not __fish_seen_subcommand_from $yvm_commands" -a rm -d 'remove yarn <version> and remove from $fish_user_paths'
 complete --no-files --command yvm --condition "not __fish_seen_subcommand_from $yvm_commands" -a help -d 'print help'
 
-complete --no-files --command yvm --condition "__fish_seen_subcommand_from use " -a "(__yvm_get_versions)"
+complete -k --no-files --command yvm --condition "__fish_seen_subcommand_from use " -a "(__yvm_get_versions)"
 complete --no-files --command yvm --condition "__fish_seen_subcommand_from rm" -a "(__yvm_get_versions_installed)"
 
 complete --no-files --command yvm -s h -l help -d 'print help'
