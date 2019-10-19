@@ -157,7 +157,7 @@ function _yvm_use
         return 1
     end
 
-    if test -s "$yvm_config/version"
+    if test -e "$yvm_config/version"
         read -l last <"$yvm_config/version"
 
         if set -l i (contains -i -- "$yvm_config/$last/bin" $fish_user_paths)
@@ -186,6 +186,7 @@ function _yvm_rm
     end
 
     if test -n "$active_version"
+        and test "$active_version" = "$yarn_version"
         echo "" >"$yvm_config/version"
     end
 
