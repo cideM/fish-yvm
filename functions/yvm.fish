@@ -97,30 +97,47 @@ function _yvm_get_url_for_version -d "Tries different prefixes to generate a val
     end
 end
 
+function _yvm_postinstall -d "Write version to file and modify fish_user_paths"
+    set -l version_to_install $argv
+
+    if test -e "$yvm_config/version"
+        read -l last <"$yvm_config/version"
+
+        if set -l i (contains -i -- "$yvm_config/$last/bin" $fish_user_paths)
+            set -e fish_user_paths[$i]
+        end
+    end
+
+    echo $version_to_install >$yvm_config/version
+
+    if not contains -- "$yvm_config/$version_to_install/bin" $fish_user_paths
+        set -U fish_user_paths "$yvm_config/$version_to_install/bin" $fish_user_paths
+    end
+end
+
 function _yvm_use
     set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
-    set -l releases (_yvm_get_releases "$_flag_f")
-
     set -l version_to_install "$argv"
 
-    set -l is_installed 0
-
-    if not test $version_to_install = "latest"; and test -d "$yvm_config/$version_to_install"
-        set is_installed 1
+    if test -d "$yvm_config/$version_to_install"
+        _yvm_postinstall $version_to_install
+        return 0
     end
 
-    if test $is_installed -eq 0; and test $version_to_install = "latest"
+    set -l releases (_yvm_get_releases "$_flag_f")
+
+    if test $version_to_install = "latest"
         set version_to_install (cat $releases | head -n 1 | awk '{ print $1 }')
     end
 
-    if test $is_installed -eq 0; and not test (grep "^$version_to_install" $releases)
+    if not test (grep "^$version_to_install" $releases)
         echo "Version $version_to_install not found. Consider running \"yvm ls\" and check that the version is correct."
         return 1
     end
 
-    if test $is_installed -eq 0
+    if not test -d "$yvm_config/$version_to_install"
         set -l url (_yvm_get_url_for_version $version_to_install)
 
         if test -z "$url"
@@ -160,20 +177,8 @@ function _yvm_use
     if not test -d "$yvm_config/$version_to_install/"
         echo "Failed to install yarn version \"$version_to_install\", but curl didn't error. Please report this bug."
         return 1
-    end
-
-    if test -e "$yvm_config/version"
-        read -l last <"$yvm_config/version"
-
-        if set -l i (contains -i -- "$yvm_config/$last/bin" $fish_user_paths)
-            set -e fish_user_paths[$i]
-        end
-    end
-
-    echo $version_to_install >$yvm_config/version
-
-    if not contains -- "$yvm_config/$version_to_install/bin" $fish_user_paths
-        set -U fish_user_paths "$yvm_config/$version_to_install/bin" $fish_user_paths
+    else
+        _yvm_postinstall $version_to_install
     end
 end
 
