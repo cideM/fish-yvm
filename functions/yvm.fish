@@ -1,6 +1,20 @@
-set -g yvm_fish 0.0.1
+set -g yvm_fish 0.7.0
+set -g yvm_fish_release_prefixes yarn kpm fb-kpm
 
 function yvm -a cmd -d "yarn version manager"
+    set -l options (fish_opt -s h -l help) (fish_opt -s v -l version)
+    argparse $options -- $argv 2>/dev/null
+
+    if test -n "$_flag_h"
+        _yvm_help
+        return 0
+    end
+
+    if test -n "$_flag_v"
+        echo "$yvm_fish"
+        return 0
+    end
+
     set -q XDG_CONFIG_HOME
     or set XDG_CONFIG_HOME ~/.config
     set -g yvm_config $XDG_CONFIG_HOME/yvm-fish
@@ -21,23 +35,25 @@ function yvm -a cmd -d "yarn version manager"
         case rm
             set -e argv[1]
             _yvm_rm $argv
-        case ""
-            echo HELLo
+        case "help"
+            _yvm_help
         case \*
-            echo "yvm: unknown flag or command \"$cmd\"" >&2
-            _yvm_help >&2
+            echo "yvm: unknown flag or command \"$cmd\""
+            _yvm_help
             return 1
     end
 end
 
 function _yvm_get_releases
+    set -l options (fish_opt -s f -l force-fetch)
+    argparse $options -- $argv
+
     set -q yvm_last_updated
     or set -g yvm_last_updated 0
     set -l releases "$yvm_config/yarn_releases"
 
     if test -n "$_flag_f"
         or test ! -e $releases -o (math (command date +%s) - $yvm_last_updated) -gt 120
-        # DOCUMENT
         echo "Fetching releases from $yarn_releases_url" >&2
 
         command curl -s $yarn_releases_url \
@@ -62,24 +78,36 @@ function _yvm_get_releases
     echo $releases
 end
 
+function _yvm_get_url_for_version -d "Tries different prefixes to generate a valid tarball url"
+    set -l v $argv
+    set -l basenames "https://github.com/yarnpkg/yarn/releases/download/v$v" "https://github.com/yarnpkg/yarn/releases/download/$v"
+
+    for b in $basenames
+        # For example with the prefixes yarn and kpm this will try things like
+        # yarn-v1.0.0.tar.gz and kpm-v1.0.0.tar.gz
+        for p in $yvm_fish_release_prefixes
+            set -l tarball_name "$p-v$v"
+            set -l url "$b/$tarball_name.tar.gz"
+
+            if curl -L --output /dev/null --silent --fail -r 0-0 "$url"
+                echo $url
+                break
+            end
+        end
+    end
+end
+
 function _yvm_use
     set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
-    set -l force_fetch 0
+    set -l releases (_yvm_get_releases "$_flag_f")
 
-    if test -n "$_flag_f"
-        set force_fetch 1
-    end
+    set -l version_to_install "$argv"
 
-    set -l releases (_yvm_get_releases "$force_fetch")
+    set -l is_installed 0
 
-    set -l yarn_version
-    set -l version_to_install $argv
-
-    set -l is_installed
-
-    if test -d "$yvm_config/$release_version"
+    if not test $version_to_install = "latest"; and test -d "$yvm_config/$version_to_install"
         set is_installed 1
     end
 
@@ -93,31 +121,40 @@ function _yvm_use
     end
 
     if test $is_installed -eq 0
-        set -l tarball_base_name "yarn-v$version_to_install"
+        set -l url (_yvm_get_url_for_version $version_to_install)
 
-        set -l url "https://yarnpkg.com/downloads/$version_to_install/$tarball_base_name.tar.gz"
+        if test -z "$url"
+            echo "Couldn't generate a valid tarball URL"
+            echo -e "Maybe you are offline, or the version you're trying to install needs to be built from source?"
+            echo "Check the yarn releases page https://github.com/yarnpkg/yarn/releases"
+            echo "Sorry :("
+            return 1
+        end
 
-        echo "fetching $url" >&2
+        echo "fetching $url..." >&2
 
         set -l temp_dir (command mktemp -d -t "yvm-yarn-$version_to_install-XXXXXXXXXXXXX")
+        set -l temp_file (command mktemp "yvm-yarn-$version_to_install-tarball-XXXXXXXXXX")
 
-        if not command curl -L --fail --progress-bar $url | command tar -xzf- -C $temp_dir
+        if not command curl -L --fail --progress-bar $url -o $temp_file 2>/dev/null
             command rm -rf $temp_dir
-            echo "yvm: fetch error -- are you offline?" >&2
+            command rm $temp_file
+
+            echo "Couldn't download the tarball from url:"
+            echo "$url"
+            echo "Are you offline?"
             return 1
         end
 
         command mkdir -p "$yvm_config/$version_to_install/"
 
-        # Newer yarn versions have /yarn_version/bin in their tarball
-        if test -d "$temp_dir/$tarball_base_name/"
-            command mv $temp_dir/$tarball_base_name/* "$yvm_config/$version_to_install/"
-            # Older yarn versions have just /dist/bin and /dist/lib in the tarball
-        else if test -d "$temp_dir/dist/"
-            command mv $temp_dir/dist/* "$yvm_config/$version_to_install/"
-        end
+        command tar -xzf $temp_file -C $temp_dir
+
+        set -l yarn_pkg_path (find $temp_dir -maxdepth 1 -mindepth 1 -type d)
+        command mv $yarn_pkg_path/* "$yvm_config/$version_to_install/"
 
         command rm -r $temp_dir
+        command rm $temp_file
     end
 
     if not test -d "$yvm_config/$version_to_install/"
@@ -125,8 +162,9 @@ function _yvm_use
         return 1
     end
 
-    if test -s "$yvm_config/version"
+    if test -e "$yvm_config/version"
         read -l last <"$yvm_config/version"
+
         if set -l i (contains -i -- "$yvm_config/$last/bin" $fish_user_paths)
             set -e fish_user_paths[$i]
         end
@@ -140,16 +178,10 @@ function _yvm_use
 end
 
 function _yvm_rm
-    set -l options (fish_opt -s f -l force-fetch) (fish_opt -s p -l pathonly)
+    set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
-    set -l force_fetch 0
-
-    if test -n "$_flag_f"
-        set force_fetch 1
-    end
-
-    set -l releases (_yvm_get_releases "$force_fetch")
+    set -l releases (_yvm_get_releases "$_flag_f" 2> /dev/null)
 
     set -l yarn_version $argv[1]
     read -l active_version <"$yvm_config/version"
@@ -159,17 +191,12 @@ function _yvm_rm
     end
 
     if test -n "$active_version"
+        and test "$active_version" = "$yarn_version"
         echo "" >"$yvm_config/version"
     end
 
     if set -l i (contains -i -- "$yvm_config/$yarn_version/bin" $fish_user_paths)
         set -e fish_user_paths[$i]
-    else if test -n "$_flag_p"
-        echo "No version \"$yarn_version\" found on \"\$fish_user_paths\"."
-    end
-
-    if test -n "$_flag_p"
-        return 0
     end
 
     if not test -d "$yvm_config/$yarn_version/"
@@ -182,15 +209,10 @@ function _yvm_rm
 end
 
 function _yvm_ls
-    set -l options (fish_opt -s i -l installed-only) (fish_opt -s f -l force-fetch)
+    set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
-    set -l force_fetch 0
 
-    if test -n "$_flag_f"
-        set force_fetch 1
-    end
-
-    set -l releases (_yvm_get_releases "$force_fetch")
+    set -l releases (_yvm_get_releases "$_flag_f")
     set -l yarn_version
 
     if test -f "$yvm_config/version"
@@ -205,11 +227,6 @@ function _yvm_ls
 
         if test -d "$yvm_config/$release_version"
             set is_installed 1
-        end
-
-        if test -n "$_flag_i"
-            and test "$is_installed" -eq 0
-            continue
         end
 
         echo -n $release_version
@@ -228,11 +245,19 @@ function _yvm_ls
 end
 
 function _yvm_help
-    echo "usage: yvm --help           Show this help"
+    echo "usage: yvm help/--help/-h   Show this help"
     echo "       yvm --version        Show the current version of yvm"
-    echo "       yvm use <version>    Download <version> and modify PATH to use it"
+    echo "       yvm use <version>    Download <version> and modify PATH to use it."
+    echo "                            Needs to be the exact version from ls."
+    echo "       yvm ls/list          List all versions including if they're installed and/or active"
+    echo "       yvm rm               Remove specified version from file system and PATH."
+    echo "                            Needs to be the exact version from ls."
+    echo "       -f/--force-fetch     Force fetch the releases from remote before \"use\" or \"ls\""
+    echo "                            Release data is cached for 120 seconds"
+    echo ""
     echo "examples:"
-    echo "       yvm use 12"
+    echo "       yvm use 1.17.3"
     echo "       yvm use latest"
     echo "       yvm ls"
+    echo "       yvm ls -f"
 end
