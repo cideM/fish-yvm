@@ -77,16 +77,22 @@ function _yvm_use
     set -l yarn_version
     set -l version_to_install $argv
 
-    if test $version_to_install = "latest"
+    set -l is_installed
+
+    if test -d "$yvm_config/$release_version"
+        set is_installed 1
+    end
+
+    if test $is_installed -eq 0; and test $version_to_install = "latest"
         set version_to_install (cat $releases | head -n 1 | awk '{ print $1 }')
     end
 
-    if not test (grep "^$version_to_install" $releases)
+    if test $is_installed -eq 0; and not test (grep "^$version_to_install" $releases)
         echo "Version $version_to_install not found. Consider running \"yvm ls\" and check that the version is correct."
         return 1
     end
 
-    if not test -d "$yvm_config/$version_to_install"
+    if test $is_installed -eq 0
         set -l tarball_base_name "yarn-v$version_to_install"
 
         set -l url "https://yarnpkg.com/downloads/$version_to_install/$tarball_base_name.tar.gz"
@@ -115,8 +121,8 @@ function _yvm_use
     end
 
     if not test -d "$yvm_config/$version_to_install/"
-      echo "Failed to install yarn version \"$version_to_install\", but curl didn't error. Please report this bug."
-      return 1
+        echo "Failed to install yarn version \"$version_to_install\", but curl didn't error. Please report this bug."
+        return 1
     end
 
     if test -s "$yvm_config/version"
@@ -201,8 +207,9 @@ function _yvm_ls
             set is_installed 1
         end
 
-        if test -n "$_flag_i"; and test "$is_installed" -eq 0
-          continue
+        if test -n "$_flag_i"
+            and test "$is_installed" -eq 0
+            continue
         end
 
         echo -n $release_version
