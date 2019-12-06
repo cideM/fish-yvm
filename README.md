@@ -13,7 +13,7 @@
 ## Quickstart
 
 ```shell
-fisher add cideM/fish-vym
+fisher add cideM/fish-yvm
 yvm use latest
 ```
 
