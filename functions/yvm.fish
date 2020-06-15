@@ -22,7 +22,7 @@ function yvm -a cmd -d "yarn version manager"
     or set -g yarn_releases_url "https://d236jo9e8rrdox.cloudfront.net/yarn-releases"
 
     if not test -d $yvm_config
-        command mkdir -p $yvm_config
+        mkdir -p $yvm_config
     end
 
     switch "$cmd"
@@ -53,10 +53,10 @@ function _yvm_get_releases
     set -l releases "$yvm_config/yarn_releases"
 
     if test -n "$_flag_f"
-        or test ! -e $releases -o (math (command date +%s) - $yvm_last_updated) -gt 120
+        or test ! -e $releases -o (math (date +%s) - $yvm_last_updated) -gt 120
         echo "Fetching releases from $yarn_releases_url" >&2
 
-        command curl -s $yarn_releases_url \
+        curl -s $yarn_releases_url \
             | tr ',' '\n'\
  | awk -F'":"' '
                 {
@@ -72,7 +72,7 @@ function _yvm_get_releases
             return 1
         end
 
-        set -g yvm_last_updated (command date +%s)
+        set -g yvm_last_updated (date +%s)
     end
 
     echo $releases
@@ -150,12 +150,12 @@ function _yvm_use
 
         echo "fetching $url..." >&2
 
-        set -l temp_dir (command mktemp -d -t "yvm-yarn-$version_to_install-XXXXXXXXXXXXX")
-        set -l temp_file (command mktemp "yvm-yarn-$version_to_install-tarball-XXXXXXXXXX")
+        set -l temp_dir (mktemp -d -t "yvm-yarn-$version_to_install-XXXXXXXXXXXXX")
+        set -l temp_file (mktemp "yvm-yarn-$version_to_install-tarball-XXXXXXXXXX")
 
-        if not command curl -L --fail --progress-bar $url -o $temp_file 2>/dev/null
-            command rm -rf $temp_dir
-            command rm $temp_file
+        if not curl -L --fail --progress-bar $url -o $temp_file 2>/dev/null
+            rm -rf $temp_dir
+            rm $temp_file
 
             echo "Couldn't download the tarball from url:"
             echo "$url"
@@ -163,15 +163,15 @@ function _yvm_use
             return 1
         end
 
-        command mkdir -p "$yvm_config/$version_to_install/"
+        mkdir -p "$yvm_config/$version_to_install/"
 
-        command tar -xzf $temp_file -C $temp_dir
+        tar -xzf $temp_file -C $temp_dir
 
         set -l yarn_pkg_path (find $temp_dir -maxdepth 1 -mindepth 1 -type d)
-        command mv $yarn_pkg_path/* "$yvm_config/$version_to_install/"
+        mv $yarn_pkg_path/* "$yvm_config/$version_to_install/"
 
-        command rm -r $temp_dir
-        command rm $temp_file
+        rm -r $temp_dir
+        rm $temp_file
     end
 
     if not test -d "$yvm_config/$version_to_install/"
