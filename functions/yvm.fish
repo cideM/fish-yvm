@@ -1,4 +1,4 @@
-set -g yvm_fish 0.7.0
+set -g yvm_fish 0.7.1
 set -g yvm_fish_release_prefixes yarn kpm fb-kpm
 
 function yvm -a cmd -d "yarn version manager"
@@ -17,7 +17,9 @@ function yvm -a cmd -d "yarn version manager"
 
     set -q XDG_CONFIG_HOME
     or set XDG_CONFIG_HOME ~/.config
+
     set -g yvm_config $XDG_CONFIG_HOME/yvm-fish
+
     set -q yarn_releases_url
     or set -g yarn_releases_url "https://d236jo9e8rrdox.cloudfront.net/yarn-releases"
 
@@ -57,8 +59,8 @@ function _yvm_get_releases
         echo "Fetching releases from $yarn_releases_url" >&2
 
         curl -s $yarn_releases_url \
-            | tr ',' '\n'\
- | awk -F'":"' '
+            | tr ',' '\n'          \
+            | awk -F'":"' '
                 {
                   version;
                   gsub(/"/, "", $2)
