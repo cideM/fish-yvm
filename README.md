@@ -43,9 +43,9 @@ end
 
 Installs and activates given version of `yarn`. Version needs to exactly match one of the versions returned from `yvm ls`, which will be suggested through tab completion. The only exception to this rule is that `latest` will always install the most recent `yarn` version. Takes an optional `-f` or `--force-fetch` flag, which forces fetching the list of available resources from remote. If not the list is only updated if it's older than 120s.
 
-List of releases is stored under `$XDG_CONFIG_HOME/yvm-fish/yarn_releases` (for most people this will be `~/.config/yvm-fish/yarn_releases`.
+List of releases is stored under `$XDG_DATA_HOME/yvm_fish/yarn_releases` (for most people this will be `~/.local/share/yvm_fish/yarn_releases`.
 
-The currently active version is stored under `$XDG_CONFIG_HOME/yvm-fish/version`.
+The currently active version is stored under `$XDG_DATA_HOME/yvm_fish/version`.
 
 Example:
 
@@ -104,7 +104,8 @@ yvm ls | grep active
 ### Uninstall `yvm`
 
 - Remove active version from \$fish_user_paths using `yvm rm`
-- Remove configuration data in `$XDG_CONFIG_HOME/yvm-fish/` (most likely `~/.config/yvm-fish`, so `rm -r ~/.config/yvm-fish`)
+- Remove configuration data in `$XDG_DATA_HOME/yvm_fish/` (most likely `~/.local/share/yvm_fish`, so `rm -r ~/.local/share/yvm_fish`)
+- **For older versions before 0.8.0**: Remove configuration data in `$XDG_CONFIG_HOME/yvm-fish/` (most likely `~/.config/yvm-fish`, so `rm -r ~/.config/yvm-fish`)
 - Remove from fish. Depends on how you installed it. When done manually you'll have to remove the installed files. With fisher it's just `fisher rm cideM/fish-yvm`
 
 ## Additional Recordings
