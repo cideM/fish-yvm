@@ -1,5 +1,13 @@
-set -g yvm_fish 0.7.1
+set -g yvm_fish 0.8.0
 set -g yvm_fish_release_prefixes yarn kpm fb-kpm
+
+set -q XDG_DATA_HOME
+or set XDG_DATA_HOME ~/.local/share
+
+set -g yvm_fish_data $XDG_DATA_HOME/yvm_fish
+
+set -q yvm_fish_yarn_releases_url
+or set -g yvm_fish_yarn_releases_url "https://d236jo9e8rrdox.cloudfront.net/yarn-releases"
 
 function yvm -a cmd -d "yarn version manager"
     set -l options (fish_opt -s h -l help) (fish_opt -s v -l version)
@@ -15,16 +23,8 @@ function yvm -a cmd -d "yarn version manager"
         return 0
     end
 
-    set -q XDG_CONFIG_HOME
-    or set XDG_CONFIG_HOME ~/.config
-
-    set -g yvm_config $XDG_CONFIG_HOME/yvm-fish
-
-    set -q yarn_releases_url
-    or set -g yarn_releases_url "https://d236jo9e8rrdox.cloudfront.net/yarn-releases"
-
-    if not test -d $yvm_config
-        mkdir -p $yvm_config
+    if not test -d $yvm_fish_data
+        mkdir -p $yvm_fish_data
     end
 
     switch "$cmd"
@@ -52,13 +52,13 @@ function _yvm_get_releases
 
     set -q yvm_last_updated
     or set -g yvm_last_updated 0
-    set -l releases "$yvm_config/yarn_releases"
+    set -l releases "$yvm_fish_data/yarn_releases"
 
     if test -n "$_flag_f"
         or test ! -e $releases -o (math (date +%s) - $yvm_last_updated) -gt 120
-        echo "Fetching releases from $yarn_releases_url" >&2
+        echo "Fetching releases from $yvm_fish_yarn_releases_url" >&2
 
-        curl -s $yarn_releases_url \
+        curl -s $yvm_fish_yarn_releases_url \
             | tr ',' '\n'          \
             | awk -F'":"' '
                 {
@@ -70,7 +70,7 @@ function _yvm_get_releases
             ' >$releases 2>/dev/null
 
         if test ! -s "$releases"
-            echo "yvm: couldn't fetch releases -- is \"$yarn_releases_url\" a valid host?" >&2
+            echo "yvm: couldn't fetch releases -- is \"$yvm_fish_yarn_releases_url\" a valid host?" >&2
             return 1
         end
 
@@ -102,18 +102,18 @@ end
 function _yvm_postinstall -d "Write version to file and modify fish_user_paths"
     set -l version_to_install $argv
 
-    if test -e "$yvm_config/version"
-        read -l last <"$yvm_config/version"
+    if test -e "$yvm_fish_data/version"
+        read -l last <"$yvm_fish_data/version"
 
-        if set -l i (contains -i -- "$yvm_config/$last/bin" $fish_user_paths)
+        if set -l i (contains -i -- "$yvm_fish_data/$last/bin" $fish_user_paths)
             set -e fish_user_paths[$i]
         end
     end
 
-    echo $version_to_install >$yvm_config/version
+    echo $version_to_install >$yvm_fish_data/version
 
-    if not contains -- "$yvm_config/$version_to_install/bin" $fish_user_paths
-        set -U fish_user_paths "$yvm_config/$version_to_install/bin" $fish_user_paths
+    if not contains -- "$yvm_fish_data/$version_to_install/bin" $fish_user_paths
+        set -U fish_user_paths "$yvm_fish_data/$version_to_install/bin" $fish_user_paths
     end
 end
 
@@ -123,7 +123,7 @@ function _yvm_use
 
     set -l version_to_install "$argv"
 
-    if test -d "$yvm_config/$version_to_install"
+    if test -d "$yvm_fish_data/$version_to_install"
         _yvm_postinstall $version_to_install
         return 0
     end
@@ -139,7 +139,7 @@ function _yvm_use
         return 1
     end
 
-    if not test -d "$yvm_config/$version_to_install"
+    if not test -d "$yvm_fish_data/$version_to_install"
         set -l url (_yvm_get_url_for_version $version_to_install)
 
         if test -z "$url"
@@ -165,18 +165,18 @@ function _yvm_use
             return 1
         end
 
-        mkdir -p "$yvm_config/$version_to_install/"
+        mkdir -p "$yvm_fish_data/$version_to_install/"
 
         tar -xzf $temp_file -C $temp_dir
 
         set -l yarn_pkg_path (find $temp_dir -maxdepth 1 -mindepth 1 -type d)
-        mv $yarn_pkg_path/* "$yvm_config/$version_to_install/"
+        mv $yarn_pkg_path/* "$yvm_fish_data/$version_to_install/"
 
         rm -r $temp_dir
         rm $temp_file
     end
 
-    if not test -d "$yvm_config/$version_to_install/"
+    if not test -d "$yvm_fish_data/$version_to_install/"
         echo "Failed to install yarn version \"$version_to_install\", but curl didn't error. Please report this bug."
         return 1
     else
@@ -191,7 +191,7 @@ function _yvm_rm
     set -l releases (_yvm_get_releases "$_flag_f" 2> /dev/null)
 
     set -l yarn_version $argv[1]
-    read -l active_version <"$yvm_config/version"
+    read -l active_version <"$yvm_fish_data/version"
 
     if test $yarn_version = "latest"
         set yarn_version (cat $releases | head -n 1 | awk '{ print $1 }')
@@ -199,17 +199,17 @@ function _yvm_rm
 
     if test -n "$active_version"
         and test "$active_version" = "$yarn_version"
-        echo "" >"$yvm_config/version"
+        echo "" >"$yvm_fish_data/version"
     end
 
-    if set -l i (contains -i -- "$yvm_config/$yarn_version/bin" $fish_user_paths)
+    if set -l i (contains -i -- "$yvm_fish_data/$yarn_version/bin" $fish_user_paths)
         set -e fish_user_paths[$i]
     end
 
-    if not test -d "$yvm_config/$yarn_version/"
-        echo "No version \"$yarn_version\" found on file system in \"$yvm_config/$yarn_version/\""
+    if not test -d "$yvm_fish_data/$yarn_version/"
+        echo "No version \"$yarn_version\" found on file system in \"$yvm_fish_data/$yarn_version/\""
     else
-        rm -r "$yvm_config/$yarn_version/"
+        rm -r "$yvm_fish_data/$yarn_version/"
     end
 
     return 0
@@ -222,8 +222,8 @@ function _yvm_ls
     set -l releases (_yvm_get_releases "$_flag_f")
     set -l yarn_version
 
-    if test -f "$yvm_config/version"
-        read yarn_version <"$yvm_config/version"
+    if test -f "$yvm_fish_data/version"
+        read yarn_version <"$yvm_fish_data/version"
     end
 
     # https://github.com/jorgebucaran/fish-cookbook#how-do-i-read-from-a-file-in-fish
@@ -232,7 +232,7 @@ function _yvm_ls
         set -l release_version $parts[1]
         set -l is_installed 0
 
-        if test -d "$yvm_config/$release_version"
+        if test -d "$yvm_fish_data/$release_version"
             set is_installed 1
         end
 

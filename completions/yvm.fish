@@ -1,14 +1,18 @@
 set -l yvm_commands ls list use rm help
 
-function __yvm_get_versions
-    set -l yvm_config "$XDG_CONFIG_HOME/yvm-fish"
+set -q XDG_DATA_HOME
+or set XDG_DATA_HOME ~/.local/share
 
-    if not test -e $yvm_config/yarn_releases
+set -l yvm_fish_data "$XDG_DATA_HOME/yvm_fish"
+
+function __yvm_get_versions
+
+    if not test -e $yvm_fish_data/yarn_releases
         _yvm_get_releases >/dev/null 2>&1
     end
 
     # https://stackoverflow.com/questions/4493205/unix-sort-of-version-numbers
-    set -l versions (cat $yvm_config/yarn_releases | awk '{ print $1 }' | sort -t. -k 1,1nr -k 2,2nr -k 3,3nr -k 4,4nr)
+    set -l versions (cat $yvm_fish_data/yarn_releases | awk '{ print $1 }' | sort -t. -k 1,1nr -k 2,2nr -k 3,3nr -k 4,4nr)
     set -p versions latest
 
     for v in $versions
@@ -17,7 +21,7 @@ function __yvm_get_versions
 end
 
 function __yvm_get_versions_installed
-    set -l versions (find $XDG_CONFIG_HOME/yvm-fish/ -maxdepth 1 -mindepth 1 -type d | xargs -I _ basename _)
+    set -l versions (find $yvm_fish_data -maxdepth 1 -mindepth 1 -type d | xargs -I _ basename _)
 
     for v in $versions
         echo $v
