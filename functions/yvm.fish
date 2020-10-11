@@ -1,4 +1,4 @@
-set -g yvm_fish 0.8.0
+set -g yvm_fish 0.9.0
 set -g yvm_fish_release_prefixes yarn kpm fb-kpm
 
 set -q XDG_DATA_HOME
@@ -134,7 +134,7 @@ function _yvm_use
         set version_to_install (cat $releases | head -n 1 | awk '{ print $1 }')
     end
 
-    if not test (grep "^$version_to_install" $releases)
+    if not grep -q "^$version_to_install" $releases
         echo "Version $version_to_install not found. Consider running \"yvm ls\" and check that the version is correct."
         return 1
     end
