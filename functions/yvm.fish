@@ -1,4 +1,4 @@
-set -g yvm_fish 0.9.0
+set -g yvm_fish 0.10.0
 set -g yvm_fish_release_prefixes yarn kpm fb-kpm
 
 set -q XDG_DATA_HOME
