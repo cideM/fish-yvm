@@ -6,6 +6,8 @@ or set XDG_DATA_HOME ~/.local/share
 
 set -g yvm_fish_data $XDG_DATA_HOME/yvm_fish
 
+set -g yvm_releases "$yvm_fish_data/yarn_releases"
+
 set -q yvm_fish_yarn_releases_url
 or set -g yvm_fish_yarn_releases_url "https://d236jo9e8rrdox.cloudfront.net/yarn-releases"
 
@@ -52,32 +54,37 @@ function _yvm_get_releases
 
     set -q yvm_last_updated
     or set -g yvm_last_updated 0
-    set -l releases "$yvm_fish_data/yarn_releases"
+
+    set -l releases_temp (mktemp)
 
     if test -n "$_flag_f"
-        or test ! -e $releases -o (math (date +%s) - $yvm_last_updated) -gt 120
-        echo "Fetching releases from $yvm_fish_yarn_releases_url" >&2
+        or test ! -e $yvm_releases -o (math (date +%s) - $yvm_last_updated) -gt 120
 
-        curl -s $yvm_fish_yarn_releases_url \
-            | tr ',' '\n'          \
-            | awk -F'":"' '
-                {
-                  version;
-                  gsub(/"/, "", $2)
-                  if ($1 ~ /name/ ) { version = $2 }
-                  if ($1 ~ /tarball/) { gsub(/v/, "", version); print version, $2 }
-                }
-            ' >$releases 2>/dev/null
+        echo "Fetching releases from $yvm_fish_yarn_releases_url"
 
-        if test ! -s "$releases"
-            echo "yvm: couldn't fetch releases -- is \"$yvm_fish_yarn_releases_url\" a valid host?" >&2
-            return 1
-        end
+        # I used to download and redirect this into a file directly, using -s
+        # to strip all curl output. But this also appears to swallow errors. In
+        # other words -s really silences it. This lead to hard to debug issues
+        # because users saw an error message that didn't tell them anything.
+        # Using a temporary file as an intermediary and letting curl output its
+        # progress and errors is much easier.
+        curl --no-progress-meter $yvm_fish_yarn_releases_url -o $releases_temp || return 1
+
+        cat $releases_temp\
+                | tr ',' '\n'\
+                | awk -F'":"' '
+                    BEGIN {
+                      version = "";
+                    }
+                    {
+                      gsub(/"/, "", $2)
+                      if ($1 ~ /name/ ) { version = $2 }
+                      if ($1 ~ /tarball/) { gsub(/v/, "", version); print version, $2; }
+                    }
+                ' >$yvm_releases
 
         set -g yvm_last_updated (date +%s)
     end
-
-    echo $releases
 end
 
 function _yvm_get_url_for_version -d "Tries different prefixes to generate a valid tarball url"
@@ -128,13 +135,13 @@ function _yvm_use
         return 0
     end
 
-    set -l releases (_yvm_get_releases "$_flag_f")
+    _yvm_get_releases "$_flag_f" || return 1
 
     if test $version_to_install = "latest"
-        set version_to_install (cat $releases | head -n 1 | awk '{ print $1 }')
+        set version_to_install (cat $yvm_releases | head -n 1 | awk '{ print $1 }')
     end
 
-    if not grep -q "^$version_to_install" $releases
+    if not grep -q "^$version_to_install" $yvm_releases
         echo "Version $version_to_install not found. Consider running \"yvm ls\" and check that the version is correct."
         return 1
     end
@@ -188,13 +195,13 @@ function _yvm_rm
     set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
-    set -l releases (_yvm_get_releases "$_flag_f" 2> /dev/null)
+    _yvm_get_releases "$_flag_f" || return 1
 
     set -l yarn_version $argv[1]
     read -l active_version <"$yvm_fish_data/version"
 
     if test $yarn_version = "latest"
-        set yarn_version (cat $releases | head -n 1 | awk '{ print $1 }')
+        set yarn_version (cat $yvm_releases | head -n 1 | awk '{ print $1 }')
     end
 
     if test -n "$active_version"
@@ -219,7 +226,7 @@ function _yvm_ls
     set -l options (fish_opt -s f -l force-fetch)
     argparse $options -- $argv
 
-    set -l releases (_yvm_get_releases "$_flag_f")
+    _yvm_get_releases "$_flag_f" || return 1
     set -l yarn_version
 
     if test -f "$yvm_fish_data/version"
@@ -248,7 +255,7 @@ function _yvm_ls
         end
 
         echo \t
-    end <$releases
+    end <$yvm_releases
 end
 
 function _yvm_help
