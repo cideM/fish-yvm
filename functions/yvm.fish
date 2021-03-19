@@ -233,8 +233,16 @@ function _yvm_ls
         read yarn_version <"$yvm_fish_data/version"
     end
 
+    set -l seen
+
     # https://github.com/jorgebucaran/fish-cookbook#how-do-i-read-from-a-file-in-fish
     while read -la release
+        # Some releases are listed twice
+        if contains $release $seen
+          continue
+        end
+        set -a seen $release
+
         set -l parts (string split " " $release)
         set -l release_version $parts[1]
         set -l is_installed 0
